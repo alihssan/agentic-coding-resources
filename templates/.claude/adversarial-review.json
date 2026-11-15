@@ -1,0 +1,6 @@
+{
+  "_comment": "Config for the adversarial-review plugin. 'no-fix' = review-only by default (report, don't modify). 'with-codex'/'codex-lane' add OpenAI Codex as a cross-vendor reviewer when its CLI is installed; both default off here. See skills/adversarial-review/SKILL.md.",
+  "mode": "no-fix",
+  "with-codex": false,
+  "codex-lane": false
+}

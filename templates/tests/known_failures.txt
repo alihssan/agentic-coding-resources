@@ -1,0 +1,15 @@
+# Tests that already fail on the default branch. The gate (scripts/check.sh) ignores these,
+# so a change is judged only on the failures it ADDS.
+#
+# One test id per line, in the form your runner prints after "FAILED" (e.g. for pytest:
+#   tests/unit/foo/test_bar.py::test_baz
+# Lines starting with "#" and blank lines are ignored.
+#
+# Rules (also in AGENTS.md):
+#   - Add a line ONLY for a failure that already exists on the default branch and is not
+#     yours to fix in this change. Say why in a trailing comment.
+#   - NEVER add a line to hide a regression your change introduced.
+#   - When you genuinely fix one, DELETE its line.
+#
+# Example:
+# tests/unit/legacy/test_old_thing.py::test_flaky_timer   # pre-existing flake, tracked in ISSUE-123
