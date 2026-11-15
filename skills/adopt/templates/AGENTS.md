@@ -45,6 +45,12 @@ Rules:
 - Never skip, delete, `xfail` or weaken a test to make it pass.
 - Never add a line to the known-failures list to hide a regression. Delete a line when you
   genuinely fix that failure.
+- **A review finding is fixed when its inputs are tests.** Put the reviewer's exact inputs
+  in tests that fail first. A green gate says nothing about a case no test holds.
+- Measure a fix with numbers, before and after ("215 of 300 rows blocked", then "0").
+- A test you added on this branch, not yet merged, may change when a later fix on the same
+  branch changes the intended behaviour. Say why in the commit. A merged test is never
+  weakened.
 - If a check cannot run (no Docker, no network), say so plainly. Do not report a pass.
 
 ## 3. Architecture (the parts that span files)
@@ -56,6 +62,9 @@ Rules:
 - **`<single source of truth, e.g. the agent/prompt catalog>`:** `<what lives there, what must
   not be edited elsewhere>`.
 - **`<a layer that must stay neutral/separate>`:** `<the boundary rule>`.
+- **`<a boundary every path must cross, e.g. redaction or an auth check>`:** list every
+  entry point that must call it (`<each dispatcher, handler, worker>`). A second entry
+  point that skips it is the usual bug, and each copy of the call needs a test.
 
 ## 4. Conventions
 
@@ -65,6 +74,12 @@ Rules:
 - **New persistent state / migrations:** `<the required pattern; migrations need a working
   downgrade()>`.
 - **Clients / external systems:** `<the one place they are constructed>`.
+- **Prompts (if the system calls a model):** shared rules live in `<one place>`, not copied
+  into each prompt. A "write it like this" example in a prompt must follow the prompt's
+  own rules: a model copies examples more than it follows rules.
+- **Detectors and filters (if the system scans text):** to remove a false positive, drop
+  the finding. Never rewrite the text the other rules read: that hides what they need to
+  see, and it can hide a real hit.
 - **Scope:** keep each change to its task. No drive-by refactors.
 
 ## 5. Safety boundaries
@@ -82,7 +97,8 @@ Rules:
 ## 6. Git and pull requests
 
 - **Branch:** work on a feature branch from `<default branch>`. Never commit to it directly.
-- **Ask before** every `git commit`, `git push`, PR creation and merge.
+- **Ask before** every `git commit`, `git push`, PR creation and merge. A yes covers that
+  one action. It does not cover the next branch or the next PR.
 - **Commits:** one per logical change. The message says what changed and why.
 - **Before opening a PR:** the gate passes, and the review (see `REVIEW.md`) is run with its
   critical and major findings fixed or answered.
