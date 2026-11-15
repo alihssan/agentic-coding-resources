@@ -123,9 +123,11 @@ a real sandbox, and say so.
 
 ## 10. Plans are small, visual, and incremental
 
-Before a feature, write a condensed plan: a couple of lines of context, a diagram of the
-workflow, a slice table, and detail for only the next slice. Don't dump everything at once.
-Revise the plan as exploration changes the picture.
+Before a feature, do the engineering thinking — problem, requirements, testable acceptance
+criteria, the smallest safe design, risks, vertical slices — then write only the result on one
+page. Start with an easy flowchart of what the feature does for the user. Write in
+Simplified Technical English: short sentences, active voice, easy words. Detail only the next
+slice, and revise the plan as exploration changes the picture.
 
 > **Example:** a standing team preference — *"targeted and small plans … condensed … make
 > graphical representations of workflow."* See
