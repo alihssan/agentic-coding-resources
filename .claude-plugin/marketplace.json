@@ -1,0 +1,14 @@
+{
+  "name": "agentic-coding-resources",
+  "description": "Practices, templates and skills for coding with AI agents.",
+  "owner": {
+    "name": "alihssan"
+  },
+  "plugins": [
+    {
+      "name": "agentic-coding",
+      "source": "./",
+      "description": "Gate-driven agentic coding setup and playbooks. Run /agentic-coding:adopt in any repo."
+    }
+  ]
+}

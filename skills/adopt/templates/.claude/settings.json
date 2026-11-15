@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "TEMPLATE. 'ask' = confirm before any write to shared state. 'deny' = the agent must never run these (production / destructive). Replace the <PLACEHOLDER> deny entries with your stack's exact deploy and infra commands, and add any others.",
+  "permissions": {
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git rebase:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh api * --method POST *)",
+      "Bash(gh api * --method PATCH *)",
+      "Bash(gh api * --method PUT *)",
+      "Bash(gh api * -X POST *)",
+      "Bash(gh api * -X PUT *)"
+    ],
+    "deny": [
+      "Bash(terraform apply:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(terraform import:*)",
+      "Bash(terraform state:*)",
+      "Bash(terraform * apply *)",
+      "Bash(terraform * destroy *)",
+      "Bash(<DEPLOY_COMMAND>:*)",
+      "Bash(<BUILD_AND_PUSH_IMAGE_COMMAND>:*)",
+      "Bash(<RUN_PROD_MIGRATION_COMMAND>:*)",
+      "Bash(<CLOUD_CLI> * delete *)",
+      "Bash(<CLOUD_CLI> * create *)",
+      "Bash(<CLOUD_CLI> * secret set *)"
+    ]
+  }
+}
