@@ -25,8 +25,10 @@ flowchart TD
 
 ## Stages
 
-1. **Plan** — a few lines of context, a workflow diagram, a slice table, detail for the next
-   slice only. Keep findings in the plan, not scattered in chat. → `skills/condensed-plans`.
+1. **Plan** — think through requirements, acceptance criteria, design, risks and slices.
+   Write one page: a flowchart of what the feature does first, then why, requirements,
+   "done when" tests, design, slices, and detail for the next slice only. Use easy English.
+   → `skills/condensed-plans`.
 
 2. **Slice & build** — take the front slice, implement it, run the gate, commit. Repeat. The
    gate (`skills/adopt/templates/scripts/check.sh`) is the definition of done for each slice. →
