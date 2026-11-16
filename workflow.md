@@ -34,6 +34,10 @@ flowchart TD
    gate (`skills/adopt/templates/scripts/check.sh`) is the definition of done for each slice. →
    `skills/gate-driven-slices`.
 
+   For Terraform on AWS, the `aws-terraform` skill adds the infra gate
+   (`scripts/check-terraform.sh`) and a plan review list. The agent writes and checks the
+   code. A human or the approved pipeline applies. → `skills/aws-terraform`.
+
 3. **Review** — when the feature is developer-done, run the adversarial review (review-only by
    default). Fix critical/major findings; record disputes. → `skills/adversarial-review`.
 

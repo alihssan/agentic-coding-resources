@@ -50,6 +50,17 @@ for name in gate-driven-slices adversarial-review security-audit memory-discipli
   [ -f "$skills_root/$name/SKILL.md" ] && place "$skills_root/$name/SKILL.md" ".claude/skills/$name/SKILL.md"
 done
 
+# The AWS Terraform skill, only for repos that use the AWS provider. It is a folder (rules,
+# templates, a worked example), so every file is placed, never overwriting.
+if git -C "$target" ls-files -- '*.tf' | (cd "$target" && xargs grep -ls 'hashicorp/aws' 2>/dev/null) | grep -q .; then
+  if [ -f "$skills_root/aws-terraform/SKILL.md" ]; then
+    (cd "$skills_root/aws-terraform" && find . -type f -not -path '*/.terraform/*' -not -name '.terraform.lock.hcl' | sed 's|^\./||' | sort) |
+      while read -r rel; do
+        place "$skills_root/aws-terraform/$rel" ".claude/skills/aws-terraform/$rel"
+      done
+  fi
+fi
+
 if [ "$dry" = 0 ]; then
   chmod +x "$target/scripts/check.sh" 2>/dev/null || true
   # The exact placeholder strings, so `adopt` can prove none is left after filling.

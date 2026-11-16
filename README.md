@@ -64,6 +64,7 @@ plugin get them too.
 | [`workflow.md`](workflow.md) | The end-to-end flow: idea → slice → gate → review → PR → deploy, and where each skill fits. |
 | [`skills/adopt/`](skills/adopt/) | One-time setup skill. Holds the drop-in [`templates/`](skills/adopt/templates/) (`AGENTS.md`, `CLAUDE.md`, `REVIEW.md`, the `check.sh` gate, `.claude/` config) and the script that copies them in. |
 | [`skills/`](skills/) | Day-to-day playbooks: gate-driven slices, adversarial review, security audit, memory discipline, condensed plans. |
+| [`skills/aws-terraform/`](skills/aws-terraform/) | Terraform on AWS: numbered rules with reasons (AWS Prescriptive Guidance + a read of `terraform-aws-modules`), pitfalls in popular modules, an infra gate (`check-terraform.sh`: fmt, validate, tflint, trivy, mocked `terraform test`), root and CI templates with an OIDC plan/apply split, and a worked module. `adopt` copies it only into repos that use the AWS provider. |
 | [`.claude-plugin/`](.claude-plugin/) | Makes this repo a Claude Code plugin and its own marketplace. |
 
 ## Adopting by hand (what `adopt` automates)

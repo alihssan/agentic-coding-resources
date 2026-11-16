@@ -1,8 +1,18 @@
 {
   "name": "agentic-coding",
   "version": "0.1.0",
-  "description": "Make 'done' mechanical for coding agents: a one-command gate, AGENTS.md standing instructions, permission guardrails, and playbooks for slices, adversarial review, security audits, memory and plans. Run /agentic-coding:adopt in any repo.",
-  "author": { "name": "alihssan" },
+  "description": "Make 'done' mechanical for coding agents: a one-command gate, AGENTS.md standing instructions, permission guardrails, and playbooks for slices, adversarial review, security audits, memory, plans and AWS Terraform. Run /agentic-coding:adopt in any repo.",
+  "author": {
+    "name": "alihssan"
+  },
   "repository": "https://github.com/alihssan/agentic-coding-resources",
-  "keywords": ["agents", "workflow", "code-review", "testing", "guardrails"]
+  "keywords": [
+    "agents",
+    "workflow",
+    "code-review",
+    "testing",
+    "guardrails",
+    "terraform",
+    "aws"
+  ]
 }
