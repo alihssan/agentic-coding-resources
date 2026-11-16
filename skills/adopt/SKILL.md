@@ -29,7 +29,9 @@ bash <this skill's directory>/scripts/install.sh .
 ```
 
 It adds `AGENTS.md`, `CLAUDE.md`, `REVIEW.md`, `scripts/check.sh`, `tests/known_failures.txt`,
-`.claude/` config and the day-to-day skills. A file that already exists is never touched: the
+`.claude/` config and the day-to-day skills. If any tracked `*.tf` file uses the
+`hashicorp/aws` provider, it also copies the `aws-terraform` skill: then follow that skill's
+"Setting up a repo" section after step 7. A file that already exists is never touched: the
 template goes to `.agentic/incoming/` instead (merged in step 4). It also saves the exact
 placeholder list to `.agentic/placeholders.txt` (checked in step 7).
 

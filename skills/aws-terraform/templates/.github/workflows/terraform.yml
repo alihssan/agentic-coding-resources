@@ -1,0 +1,127 @@
+# Terraform plan on every PR, apply the reviewed plan after merge (rules S6, C4, V3, V8).
+#   - plan:  read-only OIDC role, on PRs and on main. The plan file is kept for 1 day only.
+#   - apply: a different OIDC role, only on main, only after a human approves the
+#            "<ENVIRONMENT>" GitHub environment, and only the saved plan from this same run.
+# Actions are pinned by commit SHA. Update them with Renovate or Dependabot.
+#
+# Fill in: <TF_DIR>, <ENVIRONMENT>, <REGION>, <PLAN_ROLE_ARN>, <APPLY_ROLE_ARN>.
+# The trust policies for the two roles are in ../../iam/.
+
+name: terraform
+
+on:
+  pull_request:
+    paths: ["<TF_DIR>/**", ".github/workflows/terraform.yml"]
+  push:
+    branches: [main]
+    paths: ["<TF_DIR>/**", ".github/workflows/terraform.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-<ENVIRONMENT>
+  cancel-in-progress: false # never cancel a run that may hold the state lock
+
+env:
+  TF_DIR: <TF_DIR>
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      exitcode: ${{ steps.plan.outputs.exitcode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+
+      - name: Gate (no AWS access needed)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # tflint --init downloads plugins from GitHub
+        run: scripts/check-terraform.sh "$TF_DIR"
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: <PLAN_ROLE_ARN>
+          role-session-name: plan-${{ github.run_id }}
+          aws-region: <REGION>
+
+      - name: Init (lock file is read-only)
+        run: terraform -chdir="$TF_DIR" init -lockfile=readonly -backend-config=envs/<ENVIRONMENT>/backend.hcl
+
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          terraform -chdir="$TF_DIR" plan -detailed-exitcode -lock-timeout=5m \
+            -var-file=envs/<ENVIRONMENT>/terraform.tfvars -out=plan.out
+          code=$?
+          echo "exitcode=$code" >>"$GITHUB_OUTPUT"
+          [ "$code" = 1 ] && exit 1
+          {
+            echo '### Terraform plan (<ENVIRONMENT>)'
+            echo '```'
+            terraform -chdir="$TF_DIR" show -no-color plan.out | tail -c 60000
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Keep the plan for the apply job
+        if: github.event_name == 'push' && steps.plan.outputs.exitcode == '2'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: plan-${{ github.sha }}
+          path: ${{ env.TF_DIR }}/plan.out
+          retention-days: 1
+
+  apply:
+    needs: plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.exitcode == '2'
+    runs-on: ubuntu-latest
+    environment: <ENVIRONMENT> # protected: required reviewers, main branch only
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plan-${{ github.sha }}
+          path: ${{ env.TF_DIR }}
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: <APPLY_ROLE_ARN>
+          role-session-name: apply-${{ github.run_id }}
+          aws-region: <REGION>
+
+      - name: Init (lock file is read-only)
+        run: terraform -chdir="$TF_DIR" init -lockfile=readonly -backend-config=envs/<ENVIRONMENT>/backend.hcl
+
+      # Applying a saved plan fails if the state changed since the plan. That is the point:
+      # nothing is applied that a human did not see.
+      - name: Apply the reviewed plan
+        run: terraform -chdir="$TF_DIR" apply -lock-timeout=5m plan.out
