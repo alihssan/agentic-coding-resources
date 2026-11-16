@@ -77,8 +77,10 @@ flowchart TD
    [`templates/tests/unit.tftest.hcl`](templates/tests/unit.tftest.hcl).
 4. **Run the gate.** `scripts/check-terraform.sh` (copy it from
    [`templates/scripts/check-terraform.sh`](templates/scripts/check-terraform.sh)). It runs
-   fmt, init without a backend, validate, tflint with the AWS ruleset, trivy and the unit
-   tests, in every changed Terraform directory. `CHECK: PASS` is the only "done".
+   fmt, init without a backend, validate, the `sensitive` check (rule S10), tflint with the
+   AWS ruleset, trivy and the unit tests, in every changed Terraform directory. Unit tests
+   run with all AWS credentials removed, so an unmocked provider fails instead of calling
+   AWS. `CHECK: PASS` is the only "done".
 5. **Read the plan, when there is one.** Use the plan review list below. Say plainly what
    will be destroyed or replaced.
 6. **Hand over.** The PR says what changes in AWS, the risk, and how to roll back. It never
@@ -100,6 +102,9 @@ Read `terraform show -json plan.out` or the plan text, and report each of these:
 - **Drift.** Changes the code did not ask for. Somebody changed AWS by hand. Do not
   "fix" drift silently. Report it.
 - **Unknown values.** Large `(known after apply)` sets that hide what will change.
+- **Secrets in clear text.** Any value that looks like a password, token or key and is not
+  shown as `(sensitive value)`. That means a missing `sensitive = true` or a Helm `set` that
+  should be `set_wo` or `set_sensitive`. Do not copy the value into the PR.
 
 ## The rules in short
 
@@ -125,6 +130,16 @@ real, widely used modules: [`references/pitfalls.md`](references/pitfalls.md).
   (`manage_master_user_password = true`). Otherwise an `ephemeral` resource plus a
   write-only `*_wo` argument with `*_wo_version`. `sensitive = true` does **not** keep a value
   out of state. Never read a secret with a data source.
+- **Mark every secret sensitive, everywhere it passes** (in addition to the rule above).
+  `sensitive = true` on every secret variable and output, `sensitive(...)` on locals built
+  from secrets, Helm values in `set_wo` (write-only) or `set_sensitive`, never `set`.
+  `nonsensitive()` only with a comment that gives the reason. The gate checks names that
+  look secret. A block that is not a secret opts out with `# not-secret: <reason>`.
+- **Factory pattern for many of the same thing.** Three or more instances of one shape
+  (queues, buckets, roles, parameters) come from one `map(object({...}))` keyed by a stable
+  name, merged with `optional()` defaults, with one `for_each` over a normal child module and
+  map outputs. Not for one instance. No secrets in the spec map. See
+  [`example/log-archive-factory/`](example/log-archive-factory/).
 - **Provider guard.** `allowed_account_ids` in every `provider "aws"` block. `default_tags`
   for shared tags. No `profile` in shared code.
 - **State.** S3 backend, `use_lockfile = true` (Terraform >= 1.11; DynamoDB locking is
@@ -152,8 +167,10 @@ Copy what the repo does not have yet. Never overwrite a file that exists. Merge 
 | `templates/.github/workflows/terraform.yml` | `.github/workflows/` | `<TF_DIR>`, `<ENVIRONMENT>`, `<REGION>`, the two role ARNs. |
 | `templates/iam/` | Hand to a human | The two OIDC trust policies. A human creates the roles. |
 
-[`example/log-archive/`](example/log-archive/) is a complete reusable module that follows
-the rules, with 7 unit tests. Copy its patterns.
+Two worked examples follow the rules. Copy their patterns:
+- [`example/log-archive/`](example/log-archive/) is a reusable module with 7 unit tests.
+- [`example/log-archive-factory/`](example/log-archive-factory/) is a factory over it, with
+  4 unit tests.
 
 Wire the infra gate into the main gate (`scripts/check.sh` from the `adopt` skill), so one
 command still decides "done":
@@ -168,7 +185,7 @@ fi
 ```
 
 Tools: `terraform` >= 1.11, `tflint`, `trivy`. A missing tool fails the gate. To skip a step
-on purpose, set `SKIP=tflint` (or `trivy`, `test`) and say so in the PR.
+on purpose, set `SKIP=tflint` (or `trivy`, `sensitive`, `test`) and say so in the PR.
 
 Then run the gate once on a clean branch. It must pass. Then break one thing on purpose
 (an unformatted file) and check that it fails. Then revert.

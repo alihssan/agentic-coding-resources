@@ -24,6 +24,8 @@ module and avoid them when you **write** one. Rule IDs refer to [`rules.md`](rul
 | 14 | No wrong-account guard in examples | No example sets `allowed_account_ids`. | S4. Add it when you copy an example. |
 | 15 | CI actions pinned by tag | Third-party actions use tags like `@v1.14.0`. The release job holds a token. | V8. Pin your own pipeline by SHA. |
 | 16 | Loose inputs remain | 204 `type = any` variables. | I4. A typo in a map key is silently ignored. Check the plan. |
+| 17 | A "mocked" test that calls real AWS | Found while building `example/log-archive-factory`: with `aws` removed from the factory's `required_providers` (as tflint asks), `mock_provider "aws"` did not reach the child module, and `terraform test` tried the shell's AWS session. | F8. Keep the declaration. The gate strips AWS credentials from unit tests, so this now fails. |
+| 18 | `sensitive` taken as "safe" | `sensitive = true` hides a value in output only. The value is still in state. The rds `password_wo` description (row 10) shows how easily the two get mixed up. | S3 first (keep it out of state), then S10 (hide it everywhere). |
 
 ## Gaps in the AWS guide itself
 

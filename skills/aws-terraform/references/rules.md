@@ -127,6 +127,91 @@ Rules are numbered so a review can cite them ("breaks S4").
 - **S9. Policy as code for org rules** (required tags, encryption, approved module
   sources, allowed instance types). OPA, Sentinel or Terraform policy. Terraform policy is
   beta: its CLI `plan -policies` exits 0 on a deny, so fail on `DenyResult` in the JSON. [G]
+- **S10. Mark every secret as sensitive, everywhere it passes.** This is in addition to S3,
+  not instead of it: `sensitive` hides a value in plan, apply and output, but it does **not**
+  keep the value out of state. The gate enforces the variable, output and Helm parts. [G][F]
+  - **Variables** that carry a secret: `sensitive = true`. If the value only feeds a
+    write-only argument, also `ephemeral = true`.
+  - **Outputs** that return a secret, or anything built from one: `sensitive = true` (or
+    `ephemeral = true` between modules). Better: do not output secrets at all.
+  - **Locals and expressions** that build a secret from parts (a connection string, a
+    `jsonencode` of credentials): wrap them in `sensitive(...)`.
+  - **Helm charts** (`helm_release`, Helm provider v3): pass secret values in `set_wo`
+    with a `set_wo_revision` that you increase to rotate (write-only: not in state). If the
+    chart value must be tracked, use `set_sensitive` (hidden in the plan, but in state).
+    Never `set` or a `values` file for a secret: those show in the plan. In v3 all three are
+    lists of objects (`set_sensitive = [{ name = ..., value = ... }]`), not blocks.
+  - **`nonsensitive()`** only with a comment that says why the value is not a secret (for
+    example a hash).
+  - **Names that count as secrets:** `password`, `passwd`, `secret`, `token`, `api_key`,
+    `access_key`, `private_key`, `credential`, `connection_string`, `client_secret`, and any
+    `*_wo` input. Names ending in `_arn`, `_id`, `_name`, `_version` or `_kms_key_*` point
+    at a secret and are not secrets themselves.
+
+  ```hcl
+  variable "db_password" {
+    description = "Master password. Write-only: never stored in state."
+    type        = string
+    sensitive   = true
+    ephemeral   = true
+  }
+
+  locals {
+    # Built from an ephemeral var, so it is ephemeral too: use it only in write-only
+    # arguments (for example secret_string_wo), never in a normal one.
+    dsn = sensitive("postgres://app:${var.db_password}@${aws_db_instance.main.address}/app")
+  }
+
+  resource "helm_release" "app" {
+    # ...
+    set_wo = [{ # write-only: an ephemeral var may go here
+      name  = "db.password"
+      value = var.db_password
+    }]
+    set_wo_revision = 1
+
+    set_sensitive = [{ # not ephemeral: hidden in the plan, but stored in state
+      name  = "api.token"
+      value = var.api_token
+    }]
+  }
+  ```
+
+## F — Factory pattern
+
+A factory is a module (or a root `for_each`) that turns **one map of specs** into **many
+instances of the same thing**: queues, buckets, IAM roles, SSM parameters, accounts. It
+replaces copy-pasted module blocks. The `terraform-aws-modules` `wrappers/` directories are
+a generated form of it.
+
+- **F1. Use a factory when** three or more instances share one shape and differ only by
+  data, or when the set grows over time (new tenants, new queues). Do not use one for a
+  single instance or for things that differ in structure. *A factory for one item is the
+  single-resource wrapper of B2.* [F]
+- **F2. Input is a `map(object({...}))` keyed by a stable, human name.** Never a list. The
+  key becomes the resource address (`module.x["orders"]`), so renaming a key destroys and
+  recreates that instance (R1). Validate the keys. [M][F]
+- **F3. Defaults live in the type**, with `optional(type, default)`, plus at most one
+  `defaults` object for values that every item shares in one environment. Merge in a
+  `local`, never with `try()` chains: `try()` hides a misspelled key. [M][F]
+- **F4. One `for_each` over the child module**, not over each resource inside it. The child
+  stays a normal, testable module. The factory adds the loop and nothing else. [F]
+- **F5. Outputs are maps keyed the same way** (`{ for k, m in module.x : k => m.arn }`), so
+  callers look up an instance by name. [M]
+- **F6. Secrets do not go in the spec map.** A map variable is sensitive as a whole or not
+  at all, and marking it sensitive hides every key in the plan. Pass secrets by reference
+  (a Secrets Manager ARN per item) and read them with an ephemeral resource. [F]
+- **F7. Test the factory** with a mock: two items plan two instances, a default applies, a
+  bad key is rejected, an empty map plans nothing. See `example/log-archive-factory/`.
+  Test the child's own rules in the child: `expect_failures` cannot point into a child
+  module's resources. [F]
+- **F8. A factory still declares the provider its children use.** It has no `aws`
+  resources of its own, so tflint (`terraform_unused_required_providers`) asks you to drop
+  `aws` from `required_providers`. Do not. Without it, `mock_provider "aws"` in the
+  factory's tests does not reach the child, and `terraform test` calls AWS with whatever
+  credentials the shell has. Keep the declaration with a `# tflint-ignore` and this reason.
+  The gate also strips AWS credentials from unit tests, so a leak fails instead of
+  running. [F]
 
 ## T — State and backend
 
