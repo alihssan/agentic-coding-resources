@@ -1,0 +1,7 @@
+# Terraform working files (the aws-terraform example is a reusable module: no lock file)
+**/.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+plan.out

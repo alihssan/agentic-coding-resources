@@ -1,0 +1,9 @@
+# Accepted trivy findings. Every entry needs a reason (statement) and an expiry date, so an
+# exception is reviewed again instead of living forever (rule S8).
+# Find the ID in the trivy output, for example AVD-AWS-0089.
+misconfigurations: []
+#  - id: AVD-AWS-0089
+#    paths:
+#      - "modules/log-archive/main.tf"
+#    statement: "This bucket is the access-log target. Logging it to itself loops."
+#    expired_at: 2027-06-30
